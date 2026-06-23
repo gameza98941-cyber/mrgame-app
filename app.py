@@ -31,13 +31,60 @@ st.markdown("""
         label { color: #cbd5e1 !important; font-weight: 600 !important; font-size: 0.9rem !important; }
         #MainMenu, header, footer {visibility: hidden;}
         
-        [data-baseweb="input"], [data-baseweb="select"] > div, .stDateInput input {
-            background-color: rgba(30, 41, 59, 1) !important;
-            border: 1px solid rgba(56, 189, 248, 0.5) !important;
-            color: #ffffff !important;
+        /* สไตล์พื้นฐานของช่องกรอกข้อมูลอื่นๆ (วันเวลา, เลือกยานพาหนะ, Login) */
+        [data-baseweb="select"] > div, .stDateInput input, [data-testid="stTextInput"] input {
+            background-color: rgba(15, 23, 42, 0.8) !important;
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            color: #f1f5f9 !important;
             font-family: 'JetBrains Mono', monospace !important;
-            font-size: 1rem !important;
+            border-radius: 8px !important;
         }
+
+        /* ------------------------------------------------------------- */
+        /* ★ อัปเกรด Number Input (กม., ลิตร, บาท) ให้ดูล้ำยุคแบบ Telemetry ★ */
+        /* ------------------------------------------------------------- */
+        [data-testid="stNumberInputContainer"] {
+            background: linear-gradient(90deg, rgba(3, 7, 18, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
+            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+            border-radius: 8px !important;
+            overflow: hidden;
+            transition: all 0.3s ease !important;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        /* เมื่อคลิกพิมพ์ จะมีแสงเรืองๆ */
+        [data-testid="stNumberInputContainer"]:focus-within {
+            border-color: #0ea5e9 !important;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.4), inset 0 0 10px rgba(14, 165, 233, 0.2) !important;
+        }
+        
+        /* ตัวเลขในช่อง: หนา, สีฟ้า, เรืองแสง */
+        [data-testid="stNumberInputContainer"] input {
+            color: #38bdf8 !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1.2rem !important;
+            font-weight: 700 !important;
+            text-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
+            background: transparent !important;
+        }
+        
+        /* ปุ่ม + และ - ด้านหลัง */
+        [data-testid="stNumberInputContainer"] button {
+            background: rgba(30, 41, 59, 0.9) !important;
+            color: #38bdf8 !important;
+            border: none !important;
+            border-left: 1px solid rgba(56, 189, 248, 0.2) !important;
+            border-radius: 0 !important;
+            transition: all 0.2s ease !important;
+        }
+        
+        /* เมื่อเอาเมาส์ชี้ปุ่ม + และ - */
+        [data-testid="stNumberInputContainer"] button:hover {
+            background: #38bdf8 !important;
+            color: #030712 !important;
+            box-shadow: 0 0 15px #38bdf8 !important;
+        }
+        /* ------------------------------------------------------------- */
 
         [data-testid="stForm"], .glass-card {
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.8)) !important;
@@ -80,7 +127,6 @@ st.markdown("""
 # 1. ADVANCED API FETCHING (7 FUELS VERSION)
 # ==========================================
 def get_fuel_prices():
-    # กำหนดชนิดน้ำมันและลำดับเป๊ะๆ ตามที่ต้องการ
     target_fuels = [
         "แก๊สโซฮอล์ 95", "แก๊สโซฮอล์ E20", "แก๊สโซฮอล์ E85", 
         "แก๊สโซฮอล์ 91", "ดีเซลพรีเมียม", "ดีเซล", "ดีเซล B20"
@@ -88,7 +134,34 @@ def get_fuel_prices():
     temp_prices = {}
     status_text = ""
 
-    # ดึงข้อมูลจาก PTT OR XML Server (แม่นยำและเสถียรที่สุดของ ปตท.)
+    try:
+        url = "https://api.chnwt.dev/thai-oil-api/latest"
+        res = requests.get(url, timeout=5)
+        data = res.json()
+        prices_raw = data['response']['stations']['ptt']['prices']
+        date_str = data['response']['date']
+        
+        mapping = {
+            "Gasohol 95": "แก๊สโซฮอล์ 95",
+            "Gasohol E20": "แก๊สโซฮอล์ E20",
+            "Gasohol E85": "แก๊สโซฮอล์ E85",
+            "Gasohol 91": "แก๊สโซฮอล์ 91",
+            "Premium Diesel": "ดีเซลพรีเมียม",
+            "Super Power Diesel B7": "ดีเซลพรีเมียม",
+            "Diesel": "ดีเซล",
+            "Diesel B7": "ดีเซล",
+            "Diesel B20": "ดีเซล B20"
+        }
+        
+        for k, v in mapping.items():
+            if k in prices_raw and v not in temp_prices:
+                temp_prices[v] = f"{float(prices_raw[k]['price']):.2f}"
+                
+        formatted = {fuel: temp_prices[fuel] for fuel in target_fuels if fuel in temp_prices}
+        if formatted: return formatted, f"ข้อมูลประจำวันที่: {date_str}"
+    except:
+        pass
+
     try:
         url = "https://orapiweb.pttor.com/oilservice/OilPrice.asmx"
         headers = {'Content-Type': 'text/xml; charset=utf-8'}
@@ -106,7 +179,6 @@ def get_fuel_prices():
                     
                     if price and float(price) > 0:
                         p_up = product.upper()
-                        # จับคู่ชื่อแบบยืดหยุ่น ป้องกันระบบหลังบ้านเปลี่ยนชื่อ
                         if "E20" in p_up: temp_prices["แก๊สโซฮอล์ E20"] = price
                         elif "E85" in p_up: temp_prices["แก๊สโซฮอล์ E85"] = price
                         elif "91" in p_up: temp_prices["แก๊สโซฮอล์ 91"] = price
@@ -114,7 +186,6 @@ def get_fuel_prices():
                         elif "SUPER" in p_up or "PREMIUM" in p_up: temp_prices["ดีเซลพรีเมียม"] = price
                         elif "B20" in p_up: temp_prices["ดีเซล B20"] = price
                         elif "DIESEL" in p_up and "B20" not in p_up and "SUPER" not in p_up:
-                            # ปตท มักใช้ Diesel B7 เป็นดีเซลธรรมดา
                             if "ดีเซล" not in temp_prices: temp_prices["ดีเซล"] = price
                             
         status_text = "LIVE DATA CONNECTED (PTT OR API)"
@@ -124,9 +195,7 @@ def get_fuel_prices():
     if not temp_prices:
         return {"สถานะ": "CONNECTION_FAILED"}, "ไม่สามารถเชื่อมต่อศูนย์ข้อมูลพลังงานได้"
 
-    # จัดเรียงลำดับให้ตรงตามที่คุณต้องการ (ถ้าข้อมูลตัวไหนไม่มี จะข้ามไป)
     formatted = {fuel: temp_prices[fuel] for fuel in target_fuels if fuel in temp_prices}
-    
     return formatted, status_text
 
 # ==========================================
@@ -276,14 +345,13 @@ if check_password():
             idx = 0
             
             for fuel, price in prices.items():
-                # กำหนดสีขอบตามชนิดน้ำมัน
-                if fuel == "แก๊สโซฮอล์ 95": border_color = "#fbbf24" # เหลือง
-                elif fuel == "แก๊สโซฮอล์ E20": border_color = "#a855f7" # ม่วง
-                elif fuel == "แก๊สโซฮอล์ E85": border_color = "#ec4899" # ชมพู
-                elif fuel == "แก๊สโซฮอล์ 91": border_color = "#10b981" # เขียว
-                elif fuel == "ดีเซลพรีเมียม": border_color = "#3b82f6" # ฟ้า
-                elif fuel == "ดีเซล": border_color = "#f43f5e" # แดง
-                elif fuel == "ดีเซล B20": border_color = "#be123c" # แดงเข้ม
+                if fuel == "แก๊สโซฮอล์ 95": border_color = "#fbbf24"
+                elif fuel == "แก๊สโซฮอล์ E20": border_color = "#a855f7"
+                elif fuel == "แก๊สโซฮอล์ E85": border_color = "#ec4899"
+                elif fuel == "แก๊สโซฮอล์ 91": border_color = "#10b981"
+                elif fuel == "ดีเซลพรีเมียม": border_color = "#3b82f6"
+                elif fuel == "ดีเซล": border_color = "#f43f5e"
+                elif fuel == "ดีเซล B20": border_color = "#be123c"
                 else: border_color = "#38bdf8"
                     
                 with cols[idx % 4]:
