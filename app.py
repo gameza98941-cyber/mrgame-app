@@ -45,7 +45,6 @@ st.markdown("""
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5) !important;
         }
         
-        /* เมื่อคลิกพิมพ์ หรือเลือก จะมีแสงเรืองๆ */
         [data-testid="stNumberInputContainer"]:focus-within,
         [data-baseweb="select"] > div:focus-within,
         [data-baseweb="input"]:focus-within {
@@ -53,7 +52,6 @@ st.markdown("""
             box-shadow: 0 0 15px rgba(14, 165, 233, 0.4), inset 0 0 10px rgba(14, 165, 233, 0.2) !important;
         }
         
-        /* ตัวอักษรในช่อง: หนา, สีฟ้า, เรืองแสง */
         [data-testid="stNumberInputContainer"] input,
         [data-baseweb="select"] div,
         [data-baseweb="input"] input {
@@ -65,14 +63,12 @@ st.markdown("""
             background: transparent !important;
         }
 
-        /* เปลี่ยนสีไอคอน Dropdown และ Calendar ให้เป็นสีฟ้าเรืองแสง */
         [data-baseweb="select"] svg,
         [data-baseweb="input"] svg {
             fill: #38bdf8 !important;
             filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.5));
         }
         
-        /* ปุ่ม + และ - ด้านหลังของ Number Input */
         [data-testid="stNumberInputContainer"] button {
             background: rgba(30, 41, 59, 0.9) !important;
             color: #38bdf8 !important;
@@ -82,11 +78,67 @@ st.markdown("""
             transition: all 0.2s ease !important;
         }
         
-        /* เมื่อเอาเมาส์ชี้ปุ่ม + และ - */
         [data-testid="stNumberInputContainer"] button:hover {
             background: #38bdf8 !important;
             color: #030712 !important;
             box-shadow: 0 0 15px #38bdf8 !important;
+        }
+
+        /* ------------------------------------------------------------- */
+        /* ★ อัปเกรด File Uploader (OCR) สไตล์ Cyberpunk ★ */
+        /* ------------------------------------------------------------- */
+        [data-testid="stFileUploaderDropzone"] {
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.8)) !important;
+            border: 2px dashed rgba(168, 85, 247, 0.5) !important; /* เส้นประสีม่วง */
+            border-radius: 12px !important;
+            padding: 25px !important;
+            transition: all 0.3s ease !important;
+            box-shadow: inset 0 0 15px rgba(168, 85, 247, 0.05) !important;
+        }
+
+        [data-testid="stFileUploaderDropzone"]:hover {
+            border-color: #a855f7 !important;
+            background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(3, 7, 18, 0.95)) !important;
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.3), inset 0 0 15px rgba(168, 85, 247, 0.2) !important;
+        }
+
+        /* ข้อความในพื้นที่อัปโหลด */
+        [data-testid="stFileUploaderDropzoneInstructions"] {
+            color: #cbd5e1 !important;
+            font-family: 'JetBrains Mono', monospace !important;
+        }
+        [data-testid="stFileUploaderDropzoneInstructions"] > div {
+            color: #94a3b8 !important;
+        }
+
+        /* ปุ่ม Browse Files ใน Uploader */
+        [data-testid="stFileUploaderDropzone"] button {
+            background: rgba(168, 85, 247, 0.15) !important;
+            color: #e9d5ff !important;
+            border: 1px solid rgba(168, 85, 247, 0.5) !important;
+            border-radius: 8px !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-weight: bold !important;
+            transition: all 0.3s ease !important;
+            box-shadow: none !important;
+        }
+
+        [data-testid="stFileUploaderDropzone"] button:hover {
+            background: #a855f7 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.6) !important;
+            transform: translateY(-1px) !important;
+        }
+
+        /* สไตล์กรอบรายชื่อไฟล์ที่อัปโหลดสำเร็จ */
+        [data-testid="stUploadedFile"] {
+            background: rgba(30, 41, 59, 0.8) !important;
+            border: 1px solid rgba(168, 85, 247, 0.3) !important;
+            border-radius: 8px !important;
+        }
+        [data-testid="stUploadedFileName"] {
+            color: #e9d5ff !important;
+            font-family: 'JetBrains Mono', monospace !important;
         }
         /* ------------------------------------------------------------- */
 
