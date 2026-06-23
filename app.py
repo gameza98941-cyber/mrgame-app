@@ -30,7 +30,7 @@ st.markdown("""
         label { color: #cbd5e1 !important; font-weight: 600 !important; font-size: 0.9rem !important; }
         #MainMenu, header, footer {visibility: hidden;}
         
-        /* แก้ไขส่วน Date Input ให้ชัดเจนขึ้น */
+        /* ปรับสีช่องกรอกให้คมชัด */
         [data-baseweb="input"], [data-baseweb="select"] > div, .stDateInput input {
             background-color: rgba(30, 41, 59, 1) !important;
             border: 1px solid rgba(56, 189, 248, 0.5) !important;
@@ -105,7 +105,6 @@ def check_password():
 if check_password():
     DB_FILE = "mrgame_core_v1.db"
 
-    # ... [ฟังก์ชัน init_database, get_latest_data, calculate_realtime_metrics คงเดิม] ...
     def init_database():
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -126,33 +125,12 @@ if check_password():
         if not df.empty: return df.iloc[0]['odometer'], df.iloc[0]['date']
         return 0.0, None
 
-    def calculate_realtime_metrics(vehicle_name, current_odo, current_liters, current_price):
-        prev_odo, _ = get_latest_data(vehicle_name)
-        if prev_odo > 0 and current_odo > prev_odo:
-            distance = current_odo - prev_odo
-            return distance / current_liters, current_price / distance, distance
-        return None, None, None
-
-    with st.sidebar:
-        st.markdown("""
-            <div style='text-align: center; padding: 25px 0;'>
-                <div style='display: inline-block; padding: 10px 20px; border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 8px; background: rgba(14, 165, 233, 0.05); margin-bottom: 15px; box-shadow: inset 0 0 20px rgba(14, 165, 233, 0.1);'>
-                    <h2 style='color: #f8fafc; margin: 0; font-weight: 800; font-size: 1.8rem; letter-spacing: 2px;'>MrGame<span style='color: #38bdf8;'>_</span></h2>
-                </div>
-            </div>
-        """, unsafe_allow_html=True)
-
     conn = sqlite3.connect(DB_FILE)
     logs_df = pd.read_sql_query("SELECT * FROM fuel_logs ORDER BY date DESC, odometer DESC", conn)
     vehicles_df = pd.read_sql_query("SELECT name, fuel_type FROM vehicles", conn)
     conn.close()
 
-    # หัวข้อใหม่ปรับเป็นภาษาที่ดูเป็นมืออาชีพ
-    st.markdown("""
-        <div style='padding-top: 10px; padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;'>
-            <h1 style='margin: 0; font-size: 2.2rem; font-weight: 800;'>ศูนย์วิเคราะห์ข้อมูลอัจฉริยะ <span class='text-gradient'>(Telemetry Center)</span></h1>
-        </div>
-    """, unsafe_allow_html=True)
+    st.markdown("<h1 style='font-size: 2.2rem;'>ศูนย์วิเคราะห์ข้อมูลอัจฉริยะ <span class='text-gradient'>(Telemetry Center)</span></h1>", unsafe_allow_html=True)
 
     tab_entry, tab_dashboard, tab_records = st.tabs(["[01] บันทึกข้อมูล", "[02] แดชบอร์ดวิเคราะห์", "[03] ฐานข้อมูล_SQLITE"])
 
@@ -195,7 +173,6 @@ if check_password():
             st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_dashboard:
-        # ... (ส่วน Dashboard คงเดิม)
         if not logs_df.empty:
             p_cols = st.columns(len(vehicles_df))
             for idx, row in vehicles_df.iterrows():
@@ -216,7 +193,17 @@ if check_password():
                             """, unsafe_allow_html=True)
 
     with tab_records:
+        st.markdown("<h4 style='color: #10b981;'><span style='color: #64748b;'>//</span> ฐานข้อมูล_SQLITE (Editable)</h4>", unsafe_allow_html=True)
         if not logs_df.empty:
-            display_df = logs_df.copy()
-            display_df.columns = ['รหัส', 'วันเวลา', 'ยานพาหนะ', 'เลขไมล์ (กม.)', 'ปริมาณ (ลิตร)', 'ยอดชำระ (บาท)']
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            edited_df = st.data_editor(logs_df, use_container_width=True, num_rows="dynamic", key="fuel_editor")
+            if st.button("บันทึกการแก้ไขไปยังฐานข้อมูล"):
+                try:
+                    conn = sqlite3.connect(DB_FILE)
+                    edited_df.to_sql('fuel_logs', conn, if_exists='replace', index=False)
+                    conn.commit()
+                    conn.close()
+                    st.success("อัปเดตข้อมูลสำเร็จ!")
+                    time.sleep(1)
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {e}")
