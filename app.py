@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 import time
@@ -15,7 +15,7 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Prompt:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700;800&display=swap');
         
-        html, body, [class*="css"] { font-family: 'Prompt', 'Outfit', sans-serif !important; }
+        html, body, [class*="css"] { font-family: 'Prompt', 'Outfit', sans-serif !important; font-weight: 400 !important; }
         
         .stApp { 
             background-color: #030712;
@@ -24,9 +24,10 @@ st.markdown("""
                 linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px), 
                 linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
             background-size: 100% 100%, 40px 40px, 40px 40px;
-            color: #e2e8f0; 
+            color: #f1f5f9 !important; 
         }
         
+        label { color: #cbd5e1 !important; font-weight: 600 !important; font-size: 0.9rem !important; }
         #MainMenu, header, footer {visibility: hidden;}
         
         .tech-font { font-family: 'JetBrains Mono', monospace !important; letter-spacing: -0.5px; }
@@ -34,21 +35,21 @@ st.markdown("""
         [data-testid="stForm"], .glass-card {
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.8)) !important;
             backdrop-filter: blur(20px) !important;
-            border: 1px solid rgba(14, 165, 233, 0.15) !important;
+            border: 1px solid rgba(14, 165, 233, 0.2) !important;
             border-radius: 16px !important;
             padding: 35px !important;
-            box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
         }
         
         [data-baseweb="input"], [data-baseweb="select"] > div {
-            background-color: rgba(0, 0, 0, 0.6) !important;
-            border: 1px solid rgba(14, 165, 233, 0.2) !important;
-            border-radius: 8px !important; 
-            color: #38bdf8 !important;
+            background-color: rgba(30, 41, 59, 0.6) !important;
+            border: 1px solid rgba(14, 165, 233, 0.3) !important;
+            color: #ffffff !important;
             font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1rem !important;
         }
         
-        /* ปุ่มสวยงาม */
+        /* ปุ่มสไตล์ Cyberpunk */
         div.stButton > button, div.stFormSubmitButton > button {
             background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%) !important;
             color: #ffffff !important; 
@@ -57,27 +58,21 @@ st.markdown("""
             border-radius: 8px !important; 
             width: 100%;
             border: 1px solid rgba(56, 189, 248, 0.5) !important;
-            padding: 10px !important;
-            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+            padding: 12px !important;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3) !important;
+            transition: all 0.3s ease !important;
         }
         
         div.stButton > button:hover, div.stFormSubmitButton > button:hover { 
             transform: translateY(-2px) !important; 
             box-shadow: 0 8px 25px rgba(14, 165, 233, 0.6) !important;
-            border: 1px solid rgba(56, 189, 248, 0.8) !important;
         }
         
         .text-gradient { 
-            background: linear-gradient(to right, #38bdf8, #818cf8, #c084fc); 
+            background: linear-gradient(to right, #38bdf8, #818cf8); 
             -webkit-background-clip: text; 
             -webkit-text-fill-color: transparent; 
         }
-        
-        .stTabs [data-baseweb="tab-list"] { background: rgba(3, 7, 18, 0.6); border: 1px solid rgba(14, 165, 233, 0.3); border-radius: 16px; padding: 8px; gap: 12px; }
-        .stTabs [data-baseweb="tab"] { background: rgba(15, 23, 42, 0.5); color: #64748b; border-radius: 10px; padding: 10px 24px; }
-        .stTabs [aria-selected="true"] { background: linear-gradient(135deg, rgba(2, 132, 199, 0.4) 0%, rgba(14, 165, 233, 0.1) 100%) !important; color: #38bdf8 !important; border: 1px solid rgba(56, 189, 248, 0.6) !important; }
-        .ai-status { animation: pulse-glow 2s infinite; }
-        @keyframes pulse-glow { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
     </style>
 """, unsafe_allow_html=True)
 
@@ -85,10 +80,8 @@ st.markdown("""
 # 1. AUTHENTICATION
 # ==========================================
 def check_password():
-    if 'logged_in' not in st.session_state:
-        st.session_state.logged_in = False
-    if st.session_state.logged_in:
-        return True
+    if 'logged_in' not in st.session_state: st.session_state.logged_in = False
+    if st.session_state.logged_in: return True
 
     _, mid, _ = st.columns([1, 1.5, 1])
     with mid:
@@ -103,8 +96,7 @@ def check_password():
             if username == "mrgame" and password == "Game2541$!!":
                 st.session_state.logged_in = True
                 st.rerun()
-            else:
-                st.error("Access Denied: Invalid Credentials")
+            else: st.error("Access Denied: Invalid Credentials")
         st.markdown('</div>', unsafe_allow_html=True)
     return False
 
@@ -134,17 +126,10 @@ if check_password():
         if not df.empty: return df.iloc[0]['odometer'], df.iloc[0]['date']
         return 0.0, None
 
-    def calculate_realtime_metrics(vehicle_name, current_odo, current_liters, current_price):
-        prev_odo, _ = get_latest_data(vehicle_name)
-        if prev_odo > 0 and current_odo > prev_odo:
-            distance = current_odo - prev_odo
-            return distance / current_liters, current_price / distance, distance
-        return None, None, None
-
     with st.sidebar:
         st.markdown("""
             <div style='text-align: center; padding: 25px 0;'>
-                <div style='display: inline-block; padding: 10px 20px; border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 8px; background: rgba(14, 165, 233, 0.05); margin-bottom: 15px; box-shadow: inset 0 0 20px rgba(14, 165, 233, 0.1);'>
+                <div style='display: inline-block; padding: 10px 20px; border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 8px; background: rgba(14, 165, 233, 0.05); margin-bottom: 15px;'>
                     <h2 style='color: #f8fafc; margin: 0; font-weight: 800; font-size: 1.8rem; letter-spacing: 2px;'>MrGame<span style='color: #38bdf8;'>_</span></h2>
                 </div>
             </div>
@@ -155,20 +140,22 @@ if check_password():
     vehicles_df = pd.read_sql_query("SELECT name, fuel_type FROM vehicles", conn)
     conn.close()
 
+    st.markdown("<h1 style='font-size: 2.2rem;'>System <span class='text-gradient'>Control Panel</span></h1>", unsafe_allow_html=True)
+
     tab_entry, tab_dashboard, tab_records = st.tabs(["[01] บันทึกข้อมูล", "[02] แดชบอร์ดวิเคราะห์", "[03] ฐานข้อมูล_SQLITE"])
 
     with tab_entry:
         col_form, col_ocr = st.columns([1.2, 1])
         with col_form:
             with st.form(key='nexus_form'):
-                st.markdown("<h4 style='color: #38bdf8;'># นำเข้าข้อมูลอย่างปลอดภัย</h4>", unsafe_allow_html=True)
-                form_date = st.date_input("วันและเวลาที่บันทึก", datetime.now())
+                st.markdown("<h4 style='color: #38bdf8;'><span style='color: #64748b;'>#</span> ระบบบันทึกข้อมูล (Telemetry Input)</h4>", unsafe_allow_html=True)
+                form_date = st.date_input("วันเวลา", datetime.now())
                 v_options = {row['name']: row['fuel_type'] for _, row in vehicles_df.iterrows()}
                 form_vehicle = st.selectbox("เลือกยานพาหนะ", list(v_options.keys()))
                 form_odo = st.number_input("เลขไมล์ปัจจุบัน (กม.)", min_value=0.0, step=1.0)
                 form_liters = st.number_input("ปริมาณเชื้อเพลิง (ลิตร)", min_value=0.0, step=0.01)
                 form_price = st.number_input("ยอดชำระสุทธิ (บาท)", min_value=0.0, step=1.0)
-                submit_btn = st.form_submit_button(label='ประมวลผลคำสั่ง')
+                submit_btn = st.form_submit_button(label='ยืนยันการบันทึกข้อมูล')
             
             if submit_btn:
                 last_odo, _ = get_latest_data(form_vehicle)
@@ -185,12 +172,10 @@ if check_password():
                     st.rerun()
 
         with col_ocr:
-            # ใช้ Glass-card ครอบ UI ของ Uploader ให้สวยงาม
             st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-            st.markdown("<h4 style='color: #a855f7;'># ระบบสแกนใบเสร็จ_OCR</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color: #a855f7;'><span style='color: #64748b;'>#</span> ระบบอ่านใบเสร็จอัตโนมัติ (OCR)</h4>", unsafe_allow_html=True)
             uploaded_file = st.file_uploader("เลือกไฟล์ใบเสร็จ (Browse/Gallery/Camera)", type=['png', 'jpg', 'jpeg'])
-            
-            if uploaded_file is not None:
+            if uploaded_file:
                 st.image(uploaded_file, use_column_width=True)
                 with st.spinner('กำลังประมวลผล...'):
                     time.sleep(1.5)
