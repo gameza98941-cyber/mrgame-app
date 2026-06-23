@@ -173,24 +173,28 @@ if check_password():
             st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_dashboard:
+        st.markdown("<h4 style='color: #38bdf8;'><span style='color: #64748b;'>#</span> สรุปข้อมูลภาพรวมยานพาหนะ</h4>", unsafe_allow_html=True)
         if not logs_df.empty:
-            p_cols = st.columns(len(vehicles_df))
-            for idx, row in vehicles_df.iterrows():
-                v_name = row['name']
-                v_logs = logs_df[logs_df['vehicle_name'] == v_name].sort_values('date')
-                with p_cols[idx]:
-                    if len(v_logs) >= 3:
-                        v_logs['date'] = pd.to_datetime(v_logs['date'])
-                        days_diff = (v_logs['date'].max() - v_logs['date'].min()).days
-                        if days_diff > 0:
-                            total_cost = v_logs['total_price'].sum()
-                            est_monthly_cost = (total_cost / days_diff) * 30
-                            st.markdown(f"""
-                            <div class="glass-card">
-                                <h5 style="color: #e9d5ff;">{v_name}</h5>
-                                <h2 style="color: #f8fafc;">฿ {est_monthly_cost:,.0f}</h2>
-                            </div>
-                            """, unsafe_allow_html=True)
+            for v_name in vehicles_df['name']:
+                v_logs = logs_df[logs_df['vehicle_name'] == v_name]
+                if not v_logs.empty:
+                    # คำนวณ Metric
+                    total_cost = v_logs['total_price'].sum()
+                    total_liters = v_logs['liters'].sum()
+                    total_dist = v_logs['odometer'].max() - v_logs['odometer'].min() if len(v_logs) >= 2 else 0
+                    
+                    st.markdown(f"""
+                    <div class="glass-card" style="margin-bottom: 20px;">
+                        <h3 style="color: #38bdf8; margin-bottom: 15px;">{v_name}</h3>
+                        <div style="display: flex; gap: 40px;">
+                            <div><small style="color: #64748b;">ระยะทางรวม</small><br><strong style="font-size: 1.2rem;">{total_dist:,.0f} KM</strong></div>
+                            <div><small style="color: #64748b;">ค่าน้ำมันรวม</small><br><strong style="font-size: 1.2rem;">฿ {total_cost:,.0f}</strong></div>
+                            <div><small style="color: #64748b;">ปริมาณรวม</small><br><strong style="font-size: 1.2rem;">{total_liters:,.2f} L</strong></div>
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+        else:
+            st.info("ยังไม่มีข้อมูลบันทึกในระบบ")
 
     with tab_records:
         st.markdown("<h4 style='color: #10b981;'><span style='color: #64748b;'>//</span> ฐานข้อมูล_SQLITE (Editable)</h4>", unsafe_allow_html=True)
