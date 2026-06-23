@@ -181,15 +181,19 @@ if check_password():
                     # คำนวณ Metric
                     total_cost = v_logs['total_price'].sum()
                     total_liters = v_logs['liters'].sum()
+                    # คำนวณระยะทางรวมจาก max - min
                     total_dist = v_logs['odometer'].max() - v_logs['odometer'].min() if len(v_logs) >= 2 else 0
+                    # คำนวณอัตรากินน้ำมัน (KM/L)
+                    avg_kml = (total_dist / total_liters) if total_liters > 0 and total_dist > 0 else 0
                     
                     st.markdown(f"""
                     <div class="glass-card" style="margin-bottom: 20px;">
                         <h3 style="color: #38bdf8; margin-bottom: 15px;">{v_name}</h3>
-                        <div style="display: flex; gap: 40px;">
+                        <div style="display: flex; gap: 30px; flex-wrap: wrap;">
                             <div><small style="color: #64748b;">ระยะทางรวม</small><br><strong style="font-size: 1.2rem;">{total_dist:,.0f} KM</strong></div>
                             <div><small style="color: #64748b;">ค่าน้ำมันรวม</small><br><strong style="font-size: 1.2rem;">฿ {total_cost:,.0f}</strong></div>
                             <div><small style="color: #64748b;">ปริมาณรวม</small><br><strong style="font-size: 1.2rem;">{total_liters:,.2f} L</strong></div>
+                            <div><small style="color: #64748b;">อัตราสิ้นเปลือง</small><br><strong style="font-size: 1.2rem; color: #10b981;">{avg_kml:.2f} KM/L</strong></div>
                         </div>
                     </div>
                     """, unsafe_allow_html=True)
