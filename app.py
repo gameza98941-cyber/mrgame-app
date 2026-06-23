@@ -68,7 +68,6 @@ st.markdown("""
         
         .text-gradient { background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
         
-        /* สไตล์สำหรับไฟสถานะ API */
         .api-pulse {
             width: 8px; height: 8px; background: #10b981; border-radius: 50%;
             box-shadow: 0 0 10px #10b981; animation: pulse 2s infinite;
@@ -78,10 +77,16 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. ADVANCED API FETCHING (DUAL-CORE)
+# 1. ADVANCED API FETCHING
 # ==========================================
 def get_fuel_prices():
-    # Core 1: ลองดึงจาก Public JSON API ก่อน (เร็วและเสถียร)
+    # กำหนดชนิดน้ำมันและลำดับตามที่คุณต้องการเป๊ะๆ
+    target_fuels = [
+        "แก๊สโซฮอล์ 95", "แก๊สโซฮอล์ E20", "แก๊สโซฮอล์ E85", 
+        "แก๊สโซฮอล์ 91", "ดีเซลพรีเมียม", "ดีเซล", "ดีเซล B20"
+    ]
+    
+    # Core 1: JSON API
     try:
         url = "https://api.chnwt.dev/thai-oil-api/latest"
         res = requests.get(url, timeout=5)
@@ -89,20 +94,30 @@ def get_fuel_prices():
         prices_raw = data['response']['stations']['ptt']['prices']
         date_str = data['response']['date']
         
-        formatted = {}
         mapping = {
-            "Benzin": "เบนซิน", "Gasohol 95": "แก๊สโซฮอล์ 95", "Gasohol 91": "แก๊สโซฮอล์ 91",
-            "Gasohol E20": "แก๊สโซฮอล์ E20", "Diesel B7": "ดีเซล B7", "Diesel": "ดีเซล"
+            "Gasohol 95": "แก๊สโซฮอล์ 95",
+            "Gasohol E20": "แก๊สโซฮอล์ E20",
+            "Gasohol E85": "แก๊สโซฮอล์ E85",
+            "Gasohol 91": "แก๊สโซฮอล์ 91",
+            "Premium Diesel": "ดีเซลพรีเมียม",
+            "Super Power Diesel B7": "ดีเซลพรีเมียม",
+            "Diesel": "ดีเซล",
+            "Diesel B7": "ดีเซล",
+            "Diesel B20": "ดีเซล B20"
         }
+        
+        temp_prices = {}
         for k, v in mapping.items():
-            if k in prices_raw:
-                formatted[v] = f"{float(prices_raw[k]['price']):.2f}"
+            if k in prices_raw and v not in temp_prices:
+                temp_prices[v] = f"{float(prices_raw[k]['price']):.2f}"
                 
+        # เรียงลำดับตาม target_fuels
+        formatted = {fuel: temp_prices[fuel] for fuel in target_fuels if fuel in temp_prices}
         if formatted: return formatted, f"ข้อมูลประจำวันที่: {date_str}"
     except:
-        pass # ถ้า Core 1 ล่ม ให้ข้ามไปใช้ Core 2 ทันที
+        pass
 
-    # Core 2: Fallback ไปดึงจากเซิร์ฟเวอร์หลักของ PTT OR (SOAP XML)
+    # Core 2: Fallback XML
     try:
         url = "https://orapiweb.pttor.com/oilservice/OilPrice.asmx"
         headers = {'Content-Type': 'text/xml; charset=utf-8'}
@@ -111,21 +126,25 @@ def get_fuel_prices():
         
         import xml.etree.ElementTree as ET
         root = ET.fromstring(response.text)
+        temp_prices = {}
         for elem in root.iter():
             if 'CurrentOilPriceResult' in elem.tag:
                 inner_root = ET.fromstring(elem.text)
-                prices = {}
                 for fuel in inner_root.findall('FUEL'):
                     product = fuel.find('PRODUCT').text if fuel.find('PRODUCT') is not None else ""
                     price = fuel.find('PRICE').text if fuel.find('PRICE') is not None else ""
                     if price:
-                        if "Gasohol 95" in product and "E20" not in product: prices["แก๊สโซฮอล์ 95"] = price
-                        elif "Gasohol 91" in product: prices["แก๊สโซฮอล์ 91"] = price
-                        elif "E20" in product: prices["แก๊สโซฮอล์ E20"] = price
-                        elif "Diesel B7" in product: prices["ดีเซล B7"] = price
-                        elif "Diesel" in product and "B7" not in product and "Premium" not in product: prices["ดีเซล"] = price
-                if prices:
-                    return prices, "LIVE DATA (PTT OR WEB SERVICE)"
+                        if "Gasohol 95" in product and "E20" not in product and "E85" not in product: temp_prices["แก๊สโซฮอล์ 95"] = price
+                        elif "E20" in product: temp_prices["แก๊สโซฮอล์ E20"] = price
+                        elif "E85" in product: temp_prices["แก๊สโซฮอล์ E85"] = price
+                        elif "Gasohol 91" in product: temp_prices["แก๊สโซฮอล์ 91"] = price
+                        elif "Super Power" in product or "Premium" in product: temp_prices["ดีเซลพรีเมียม"] = price
+                        elif "B20" in product: temp_prices["ดีเซล B20"] = price
+                        elif "Diesel" in product and "Super" not in product and "Premium" not in product: 
+                            if "ดีเซล" not in temp_prices: temp_prices["ดีเซล"] = price
+        
+        formatted = {fuel: temp_prices[fuel] for fuel in target_fuels if fuel in temp_prices}
+        if formatted: return formatted, "LIVE DATA (PTT OR WEB SERVICE)"
     except:
         pass
         
@@ -273,28 +292,33 @@ if check_password():
         
         if "สถานะ" not in prices:
             st.markdown(f"<p style='color: #94a3b8; font-family: \"JetBrains Mono\", monospace; font-size: 0.85rem; margin-top: -10px;'>SYS_LOG: {status_text}</p>", unsafe_allow_html=True)
-            cols = st.columns(3)
+            
+            # ใช้ 4 คอลัมน์เพื่อให้จัดวาง 7 ชนิดน้ำมันได้สวยงามขึ้น
+            cols = st.columns(4)
             idx = 0
             
             for fuel, price in prices.items():
-                # แยกสีตามประเภทน้ำมันให้ดูหรูหรา
-                if "95" in fuel: border_color = "#fbbf24" # เหลืองทอง
-                elif "91" in fuel: border_color = "#10b981" # เขียว
-                elif "ดีเซล" in fuel: border_color = "#f43f5e" # แดง
-                elif "E20" in fuel: border_color = "#a855f7" # ม่วง
-                else: border_color = "#38bdf8" # ฟ้า
+                # กำหนดสีขอบและเงาตามชนิดน้ำมันแบบมืออาชีพ
+                if fuel == "แก๊สโซฮอล์ 95": border_color = "#fbbf24" # เหลืองทอง
+                elif fuel == "แก๊สโซฮอล์ E20": border_color = "#a855f7" # ม่วง
+                elif fuel == "แก๊สโซฮอล์ E85": border_color = "#ec4899" # ชมพู
+                elif fuel == "แก๊สโซฮอล์ 91": border_color = "#10b981" # เขียว
+                elif fuel == "ดีเซลพรีเมียม": border_color = "#3b82f6" # ฟ้าพรีเมียม
+                elif fuel == "ดีเซล": border_color = "#f43f5e" # แดง
+                elif fuel == "ดีเซล B20": border_color = "#be123c" # แดงเข้ม
+                else: border_color = "#38bdf8"
                     
-                with cols[idx % 3]:
+                with cols[idx % 4]:
                     st.markdown(f"""
                     <div style="background: linear-gradient(180deg, rgba(15, 23, 42, 0.6) 0%, rgba(3, 7, 18, 0.9) 100%); 
                                 border: 1px solid rgba(255,255,255,0.05); border-top: 4px solid {border_color}; 
                                 padding: 25px 20px; border-radius: 12px; margin-bottom: 20px; position: relative; overflow: hidden;
                                 box-shadow: 0 10px 30px -10px rgba(0,0,0,0.7); transition: transform 0.3s ease;">
-                        <p style="color: #cbd5e1; font-size: 1rem; margin: 0 0 5px 0; font-weight: 600;">{fuel}</p>
+                        <p style="color: #cbd5e1; font-size: 0.9rem; margin: 0 0 5px 0; font-weight: 600; white-space: nowrap;">{fuel}</p>
                         <div style="display: flex; align-items: baseline; gap: 8px;">
-                            <h1 style="color: #ffffff; font-family: 'JetBrains Mono', monospace; font-size: 3rem; margin: 0; font-weight: 800; text-shadow: 0 0 20px {border_color}40;">{price}</h1>
-                            <span style="color: #64748b; font-size: 1rem; font-weight: 700;">THB / L</span>
+                            <h1 style="color: #ffffff; font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; margin: 0; font-weight: 800; text-shadow: 0 0 15px {border_color}40;">{price}</h1>
                         </div>
+                        <span style="color: #64748b; font-size: 0.8rem; font-weight: 700;">THB / LITER</span>
                     </div>
                     """, unsafe_allow_html=True)
                 idx += 1
