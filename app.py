@@ -30,7 +30,14 @@ st.markdown("""
         label { color: #cbd5e1 !important; font-weight: 600 !important; font-size: 0.9rem !important; }
         #MainMenu, header, footer {visibility: hidden;}
         
-        .tech-font { font-family: 'JetBrains Mono', monospace !important; letter-spacing: -0.5px; }
+        /* แก้ไขส่วน Date Input ให้ชัดเจนขึ้น */
+        [data-baseweb="input"], [data-baseweb="select"] > div, .stDateInput input {
+            background-color: rgba(30, 41, 59, 1) !important;
+            border: 1px solid rgba(56, 189, 248, 0.5) !important;
+            color: #ffffff !important;
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1rem !important;
+        }
 
         [data-testid="stForm"], .glass-card {
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.8)) !important;
@@ -39,14 +46,6 @@ st.markdown("""
             border-radius: 16px !important;
             padding: 35px !important;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
-        }
-        
-        [data-baseweb="input"], [data-baseweb="select"] > div {
-            background-color: rgba(30, 41, 59, 0.6) !important;
-            border: 1px solid rgba(14, 165, 233, 0.3) !important;
-            color: #ffffff !important;
-            font-family: 'JetBrains Mono', monospace !important;
-            font-size: 1rem !important;
         }
         
         /* ปุ่มสไตล์ Cyberpunk */
@@ -106,6 +105,7 @@ def check_password():
 if check_password():
     DB_FILE = "mrgame_core_v1.db"
 
+    # ... [ฟังก์ชัน init_database, get_latest_data, calculate_realtime_metrics คงเดิม] ...
     def init_database():
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -126,10 +126,17 @@ if check_password():
         if not df.empty: return df.iloc[0]['odometer'], df.iloc[0]['date']
         return 0.0, None
 
+    def calculate_realtime_metrics(vehicle_name, current_odo, current_liters, current_price):
+        prev_odo, _ = get_latest_data(vehicle_name)
+        if prev_odo > 0 and current_odo > prev_odo:
+            distance = current_odo - prev_odo
+            return distance / current_liters, current_price / distance, distance
+        return None, None, None
+
     with st.sidebar:
         st.markdown("""
             <div style='text-align: center; padding: 25px 0;'>
-                <div style='display: inline-block; padding: 10px 20px; border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 8px; background: rgba(14, 165, 233, 0.05); margin-bottom: 15px;'>
+                <div style='display: inline-block; padding: 10px 20px; border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 8px; background: rgba(14, 165, 233, 0.05); margin-bottom: 15px; box-shadow: inset 0 0 20px rgba(14, 165, 233, 0.1);'>
                     <h2 style='color: #f8fafc; margin: 0; font-weight: 800; font-size: 1.8rem; letter-spacing: 2px;'>MrGame<span style='color: #38bdf8;'>_</span></h2>
                 </div>
             </div>
@@ -140,7 +147,12 @@ if check_password():
     vehicles_df = pd.read_sql_query("SELECT name, fuel_type FROM vehicles", conn)
     conn.close()
 
-    st.markdown("<h1 style='font-size: 2.2rem;'>System <span class='text-gradient'>Control Panel</span></h1>", unsafe_allow_html=True)
+    # หัวข้อใหม่ปรับเป็นภาษาที่ดูเป็นมืออาชีพ
+    st.markdown("""
+        <div style='padding-top: 10px; padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;'>
+            <h1 style='margin: 0; font-size: 2.2rem; font-weight: 800;'>ศูนย์วิเคราะห์ข้อมูลอัจฉริยะ <span class='text-gradient'>(Telemetry Center)</span></h1>
+        </div>
+    """, unsafe_allow_html=True)
 
     tab_entry, tab_dashboard, tab_records = st.tabs(["[01] บันทึกข้อมูล", "[02] แดชบอร์ดวิเคราะห์", "[03] ฐานข้อมูล_SQLITE"])
 
@@ -183,6 +195,7 @@ if check_password():
             st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_dashboard:
+        # ... (ส่วน Dashboard คงเดิม)
         if not logs_df.empty:
             p_cols = st.columns(len(vehicles_df))
             for idx, row in vehicles_df.iterrows():
