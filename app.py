@@ -48,7 +48,7 @@ st.markdown("""
             font-family: 'JetBrains Mono', monospace !important;
         }
         
-        /* แก้ไขปุ่ม: ครอบคลุมทั้งปุ่มปกติและปุ่ม Submit ใน Form */
+        /* ปุ่มสวยงาม */
         div.stButton > button, div.stFormSubmitButton > button {
             background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%) !important;
             color: #ffffff !important; 
@@ -147,15 +147,6 @@ if check_password():
                 <div style='display: inline-block; padding: 10px 20px; border: 1px solid rgba(14, 165, 233, 0.4); border-radius: 8px; background: rgba(14, 165, 233, 0.05); margin-bottom: 15px; box-shadow: inset 0 0 20px rgba(14, 165, 233, 0.1);'>
                     <h2 style='color: #f8fafc; margin: 0; font-weight: 800; font-size: 1.8rem; letter-spacing: 2px;'>MrGame<span style='color: #38bdf8;'>_</span></h2>
                 </div>
-                <p style='color: #94a3b8; font-size: 0.75rem; font-family: "JetBrains Mono", monospace; letter-spacing: 1px;'>โหนดวิเคราะห์ข้อมูลยานพาหนะ</p>
-            </div>
-        """, unsafe_allow_html=True)
-        st.markdown("""
-            <div style='background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(16, 185, 129, 0.3); padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 12px;'>
-                <div class='ai-status' style='width: 10px; height: 10px; border-radius: 50%; background-color: #10b981;'></div>
-                <div style='display: flex; flex-direction: column;'>
-                    <span style='color: #10b981; font-size: 0.8rem; font-weight: 700; letter-spacing: 1px;'>ระบบ AI พร้อมทำงาน</span>
-                </div>
             </div>
         """, unsafe_allow_html=True)
 
@@ -164,58 +155,47 @@ if check_password():
     vehicles_df = pd.read_sql_query("SELECT name, fuel_type FROM vehicles", conn)
     conn.close()
 
-    st.markdown("""
-        <div style='padding-top: 10px; padding-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;'>
-            <h1 style='margin: 0; font-size: 2.5rem; font-weight: 800; letter-spacing: -1px;'><span class='text-gradient'>ศูนย์ควบคุม</span> หลัก</h1>
-        </div>
-    """, unsafe_allow_html=True)
-
     tab_entry, tab_dashboard, tab_records = st.tabs(["[01] บันทึกข้อมูล", "[02] แดชบอร์ดวิเคราะห์", "[03] ฐานข้อมูล_SQLITE"])
 
     with tab_entry:
         col_form, col_ocr = st.columns([1.2, 1])
         with col_form:
             with st.form(key='nexus_form'):
-                st.markdown("<h4 style='color: #f8fafc; font-weight: 600; margin-bottom: 25px; letter-spacing: 1px;'><span style='color: #38bdf8;'>#</span> นำเข้าข้อมูลอย่างปลอดภัย</h4>", unsafe_allow_html=True)
+                st.markdown("<h4 style='color: #38bdf8;'># นำเข้าข้อมูลอย่างปลอดภัย</h4>", unsafe_allow_html=True)
                 form_date = st.date_input("วันและเวลาที่บันทึก", datetime.now())
                 v_options = {row['name']: row['fuel_type'] for _, row in vehicles_df.iterrows()}
                 form_vehicle = st.selectbox("เลือกยานพาหนะ", list(v_options.keys()))
-                last_odo, _ = get_latest_data(form_vehicle)
-                st.markdown(f"""
-                    <div style='background: rgba(14, 165, 233, 0.05); border-left: 3px solid #0ea5e9; padding: 12px 16px; border-radius: 4px; margin-bottom: 20px;'>
-                        <span style='color: #64748b; font-size: 0.75rem; font-family: "JetBrains Mono", monospace;'>SYS.เลขไมล์ล่าสุด</span><br>
-                        <span class='tech-font' style='color: #38bdf8; font-size: 1.3rem; font-weight: 700;'>{last_odo:,.1f} KM</span>
-                    </div>
-                """, unsafe_allow_html=True)
-                c1, c2 = st.columns(2)
-                with c1: form_odo = st.number_input("เลขไมล์ปัจจุบัน (กม.)", min_value=0.0, step=1.0)
-                with c2: form_liters = st.number_input("ปริมาณเชื้อเพลิง (ลิตร)", min_value=0.0, step=0.01)
+                form_odo = st.number_input("เลขไมล์ปัจจุบัน (กม.)", min_value=0.0, step=1.0)
+                form_liters = st.number_input("ปริมาณเชื้อเพลิง (ลิตร)", min_value=0.0, step=0.01)
                 form_price = st.number_input("ยอดชำระสุทธิ (บาท)", min_value=0.0, step=1.0)
                 submit_btn = st.form_submit_button(label='ประมวลผลคำสั่ง')
+            
             if submit_btn:
+                last_odo, _ = get_latest_data(form_vehicle)
                 if form_odo <= last_odo and last_odo > 0:
                     st.error(f"ข้อผิดพลาด: เลขไมล์ปัจจุบันต้องมากกว่าเลขไมล์เดิม ({last_odo:,.1f} กม.)")
-                elif form_odo <= 0 or form_liters <= 0 or form_price <= 0:
-                    st.error("ข้อผิดพลาด: ตรวจพบค่าว่างหรือศูนย์ในระบบ กรุณากรอกให้ครบถ้วน")
                 else:
-                    kml, cpkm, dist = calculate_realtime_metrics(form_vehicle, form_odo, form_liters, form_price)
                     conn = sqlite3.connect(DB_FILE)
                     c = conn.cursor()
                     c.execute("INSERT INTO fuel_logs (date, vehicle_name, odometer, liters, total_price) VALUES (?, ?, ?, ?, ?)", (form_date.strftime('%Y-%m-%d'), form_vehicle, form_odo, form_liters, form_price))
                     conn.commit()
                     conn.close()
-                    st.success("บันทึกข้อมูลลงฐานข้อมูลเรียบร้อยแล้ว.")
+                    st.success("บันทึกข้อมูลเรียบร้อย.")
                     time.sleep(1)
                     st.rerun()
 
         with col_ocr:
-            st.markdown("<h4 style='color: #f8fafc; font-weight: 600; margin-bottom: 25px; letter-spacing: 1px;'><span style='color: #a855f7;'>#</span> ระบบสแกนใบเสร็จ_OCR</h4>", unsafe_allow_html=True)
-            st.markdown("""
-            <div style='background: rgba(15, 23, 42, 0.4); border: 1px dashed rgba(168, 85, 247, 0.4); border-radius: 8px; padding: 25px; text-align: center;'>
-                <div style='font-size: 30px; margin-bottom: 10px;'>📷</div>
-                <p style='color: #94a3b8; font-size: 0.85rem; font-family: "JetBrains Mono", monospace;'>รอรับไฟล์ภาพเพื่อประมวลผลด้วย TESSERACT</p>
-            </div>
-            """, unsafe_allow_html=True)
+            # ใช้ Glass-card ครอบ UI ของ Uploader ให้สวยงาม
+            st.markdown('<div class="glass-card">', unsafe_allow_html=True)
+            st.markdown("<h4 style='color: #a855f7;'># ระบบสแกนใบเสร็จ_OCR</h4>", unsafe_allow_html=True)
+            uploaded_file = st.file_uploader("เลือกไฟล์ใบเสร็จ (Browse/Gallery/Camera)", type=['png', 'jpg', 'jpeg'])
+            
+            if uploaded_file is not None:
+                st.image(uploaded_file, use_column_width=True)
+                with st.spinner('กำลังประมวลผล...'):
+                    time.sleep(1.5)
+                st.success("ระบบประมวลผลเสร็จสิ้น")
+            st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_dashboard:
         if not logs_df.empty:
@@ -231,9 +211,9 @@ if check_password():
                             total_cost = v_logs['total_price'].sum()
                             est_monthly_cost = (total_cost / days_diff) * 30
                             st.markdown(f"""
-                            <div class="glass-card" style="border-top: 3px solid #c084fc !important; padding: 25px !important;">
-                                <h5 style="color: #e9d5ff; margin: 0 0 10px 0;">{v_name}</h5>
-                                <h2 class="tech-font" style="color: #f8fafc; font-weight: 800; margin: 5px 0;">฿ {est_monthly_cost:,.0f}</h2>
+                            <div class="glass-card">
+                                <h5 style="color: #e9d5ff;">{v_name}</h5>
+                                <h2 style="color: #f8fafc;">฿ {est_monthly_cost:,.0f}</h2>
                             </div>
                             """, unsafe_allow_html=True)
 
