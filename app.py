@@ -30,20 +30,13 @@ st.markdown("""
         
         label { color: #cbd5e1 !important; font-weight: 600 !important; font-size: 0.9rem !important; }
         #MainMenu, header, footer {visibility: hidden;}
-        
-        /* สไตล์พื้นฐานของช่องกรอกข้อมูลอื่นๆ (วันเวลา, เลือกยานพาหนะ, Login) */
-        [data-baseweb="select"] > div, .stDateInput input, [data-testid="stTextInput"] input {
-            background-color: rgba(15, 23, 42, 0.8) !important;
-            border: 1px solid rgba(56, 189, 248, 0.3) !important;
-            color: #f1f5f9 !important;
-            font-family: 'JetBrains Mono', monospace !important;
-            border-radius: 8px !important;
-        }
 
         /* ------------------------------------------------------------- */
-        /* ★ อัปเกรด Number Input (กม., ลิตร, บาท) ให้ดูล้ำยุคแบบ Telemetry ★ */
+        /* ★ อัปเกรด Input ทั้งหมด (วันเวลา, ยานพาหนะ, ตัวเลข, ล็อกอิน) ให้ดูล้ำยุค ★ */
         /* ------------------------------------------------------------- */
-        [data-testid="stNumberInputContainer"] {
+        [data-testid="stNumberInputContainer"], 
+        [data-baseweb="select"] > div, 
+        [data-baseweb="input"] {
             background: linear-gradient(90deg, rgba(3, 7, 18, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
             border: 1px solid rgba(56, 189, 248, 0.3) !important;
             border-radius: 8px !important;
@@ -52,23 +45,34 @@ st.markdown("""
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5) !important;
         }
         
-        /* เมื่อคลิกพิมพ์ จะมีแสงเรืองๆ */
-        [data-testid="stNumberInputContainer"]:focus-within {
+        /* เมื่อคลิกพิมพ์ หรือเลือก จะมีแสงเรืองๆ */
+        [data-testid="stNumberInputContainer"]:focus-within,
+        [data-baseweb="select"] > div:focus-within,
+        [data-baseweb="input"]:focus-within {
             border-color: #0ea5e9 !important;
             box-shadow: 0 0 15px rgba(14, 165, 233, 0.4), inset 0 0 10px rgba(14, 165, 233, 0.2) !important;
         }
         
-        /* ตัวเลขในช่อง: หนา, สีฟ้า, เรืองแสง */
-        [data-testid="stNumberInputContainer"] input {
+        /* ตัวอักษรในช่อง: หนา, สีฟ้า, เรืองแสง */
+        [data-testid="stNumberInputContainer"] input,
+        [data-baseweb="select"] div,
+        [data-baseweb="input"] input {
             color: #38bdf8 !important;
             font-family: 'JetBrains Mono', monospace !important;
-            font-size: 1.2rem !important;
+            font-size: 1.1rem !important;
             font-weight: 700 !important;
             text-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
             background: transparent !important;
         }
+
+        /* เปลี่ยนสีไอคอน Dropdown และ Calendar ให้เป็นสีฟ้าเรืองแสง */
+        [data-baseweb="select"] svg,
+        [data-baseweb="input"] svg {
+            fill: #38bdf8 !important;
+            filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.5));
+        }
         
-        /* ปุ่ม + และ - ด้านหลัง */
+        /* ปุ่ม + และ - ด้านหลังของ Number Input */
         [data-testid="stNumberInputContainer"] button {
             background: rgba(30, 41, 59, 0.9) !important;
             color: #38bdf8 !important;
