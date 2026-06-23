@@ -15,9 +15,7 @@ st.markdown("""
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Prompt:wght@300;400;500;600&family=JetBrains+Mono:wght@400;700;800&display=swap');
         
-        html, body, [class*="css"] { 
-            font-family: 'Prompt', 'Outfit', sans-serif !important; 
-        }
+        html, body, [class*="css"] { font-family: 'Prompt', 'Outfit', sans-serif !important; }
         
         .stApp { 
             background-color: #030712;
@@ -50,14 +48,23 @@ st.markdown("""
             font-family: 'JetBrains Mono', monospace !important;
         }
         
-        div.stButton > button {
+        /* แก้ไขปุ่ม: ครอบคลุมทั้งปุ่มปกติและปุ่ม Submit ใน Form */
+        div.stButton > button, div.stFormSubmitButton > button {
             background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%) !important;
             color: #ffffff !important; 
             font-weight: 700 !important; 
             text-transform: uppercase;
             border-radius: 8px !important; 
             width: 100%;
-            border: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border: 1px solid rgba(56, 189, 248, 0.5) !important;
+            padding: 10px !important;
+            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3), inset 0 1px 0 rgba(255,255,255,0.2) !important;
+        }
+        
+        div.stButton > button:hover, div.stFormSubmitButton > button:hover { 
+            transform: translateY(-2px) !important; 
+            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.6) !important;
+            border: 1px solid rgba(56, 189, 248, 0.8) !important;
         }
         
         .text-gradient { 
@@ -83,7 +90,6 @@ def check_password():
     if st.session_state.logged_in:
         return True
 
-    # ใช้ Column เพื่อทำ Grid จัดกึ่งกลาง
     _, mid, _ = st.columns([1, 1.5, 1])
     with mid:
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -108,7 +114,6 @@ def check_password():
 if check_password():
     DB_FILE = "mrgame_core_v1.db"
 
-    # ... (ส่วนเดิมของคุณเริ่มต่อจากตรงนี้ได้เลย) ...
     def init_database():
         conn = sqlite3.connect(DB_FILE)
         c = conn.cursor()
@@ -213,7 +218,6 @@ if check_password():
             """, unsafe_allow_html=True)
 
     with tab_dashboard:
-        # ... (ส่วน Dashboard ของคุณ)
         if not logs_df.empty:
             p_cols = st.columns(len(vehicles_df))
             for idx, row in vehicles_df.iterrows():
