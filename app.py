@@ -32,55 +32,75 @@ st.markdown("""
         #MainMenu, header, footer {visibility: hidden;}
 
         /* ------------------------------------------------------------- */
-        /* ★ อัปเกรด Input ทั้งหมด (วันเวลา, ยานพาหนะ, ตัวเลข, ล็อกอิน) ให้ดูล้ำยุค ★ */
+        /* ★ ปราบ Input ทุกชนิดในระบบ (ล็อกอิน, รหัสผ่าน, ตัวเลข, วันที่) ★ */
         /* ------------------------------------------------------------- */
+        
+        /* 1. บังคับให้ "ตัวกล่อง" เป็นสีกรมท่าไล่เฉด Cyberpunk ทั้งหมด */
+        [data-testid="stTextInput"] > div > div,
         [data-testid="stNumberInputContainer"], 
         [data-baseweb="select"] > div, 
-        [data-baseweb="input"] {
-            background: linear-gradient(90deg, rgba(3, 7, 18, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%) !important;
-            border: 1px solid rgba(56, 189, 248, 0.3) !important;
+        .stDateInput > div > div {
+            background: linear-gradient(90deg, rgba(3, 7, 18, 0.9) 0%, rgba(15, 23, 42, 0.9) 100%) !important;
+            border: 1px solid rgba(56, 189, 248, 0.4) !important;
             border-radius: 8px !important;
-            overflow: hidden;
+            color: #38bdf8 !important;
             transition: all 0.3s ease !important;
-            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5) !important;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.6) !important;
         }
-        
+
+        /* 2. ฆ่าสีขาวทึบที่ติดมากับ input ชั้นในสุดของ Streamlit */
+        input[type="text"], input[type="password"], input[type="number"], 
+        [data-baseweb="base-input"], [data-baseweb="input"] {
+            background-color: transparent !important;
+        }
+
+        /* 3. เอฟเฟกต์เรืองแสงเวลาคลิกเข้าไปพิมพ์ */
+        [data-testid="stTextInput"] > div > div:focus-within,
         [data-testid="stNumberInputContainer"]:focus-within,
         [data-baseweb="select"] > div:focus-within,
-        [data-baseweb="input"]:focus-within {
+        .stDateInput > div > div:focus-within {
             border-color: #0ea5e9 !important;
-            box-shadow: 0 0 15px rgba(14, 165, 233, 0.4), inset 0 0 10px rgba(14, 165, 233, 0.2) !important;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.5), inset 0 0 10px rgba(14, 165, 233, 0.2) !important;
         }
         
-        [data-testid="stNumberInputContainer"] input,
-        [data-baseweb="select"] div,
-        [data-baseweb="input"] input {
+        /* 4. จัดฟอนต์ตัวอักษรที่พิมพ์ให้เป็นสีฟ้าเรืองแสงแบบ Holographic */
+        input {
             color: #38bdf8 !important;
             font-family: 'JetBrains Mono', monospace !important;
             font-size: 1.1rem !important;
             font-weight: 700 !important;
-            text-shadow: 0 0 8px rgba(56, 189, 248, 0.5) !important;
+            text-shadow: 0 0 8px rgba(56, 189, 248, 0.4) !important;
+            -webkit-text-fill-color: #38bdf8 !important;
+        }
+
+        /* 5. [สำคัญสุด] ป้องกัน Chrome Autofill เปลี่ยนพื้นหลังเป็นสีขาว/เหลือง */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #0f172a inset !important;
+            -webkit-text-fill-color: #38bdf8 !important;
+            transition: background-color 5000s ease-in-out 0s;
+        }
+
+        /* เปลี่ยนสีไอคอน "ลูกตา" (ดูรหัสผ่าน) และ Dropdown ให้เป็นสีฟ้า */
+        [data-testid="stTextInput"] button,
+        [data-baseweb="select"] svg, .stDateInput svg {
+            color: #38bdf8 !important;
+            fill: #38bdf8 !important;
             background: transparent !important;
         }
 
-        [data-baseweb="select"] svg,
-        [data-baseweb="input"] svg {
-            fill: #38bdf8 !important;
-            filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.5));
-        }
-        
+        /* ปุ่ม + และ - ด้านหลังของ Number Input */
         [data-testid="stNumberInputContainer"] button {
             background: rgba(30, 41, 59, 0.9) !important;
             color: #38bdf8 !important;
             border: none !important;
             border-left: 1px solid rgba(56, 189, 248, 0.2) !important;
             border-radius: 0 !important;
-            transition: all 0.2s ease !important;
         }
-        
         [data-testid="stNumberInputContainer"] button:hover {
-            background: #38bdf8 !important;
-            color: #030712 !important;
+            background: #38bdf8 !important; color: #030712 !important;
             box-shadow: 0 0 15px #38bdf8 !important;
         }
 
@@ -89,60 +109,56 @@ st.markdown("""
         /* ------------------------------------------------------------- */
         [data-testid="stFileUploaderDropzone"] {
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.8)) !important;
-            border: 2px dashed rgba(168, 85, 247, 0.5) !important; /* เส้นประสีม่วง */
-            border-radius: 12px !important;
-            padding: 25px !important;
+            border: 2px dashed rgba(168, 85, 247, 0.5) !important;
+            border-radius: 12px !important; padding: 25px !important;
             transition: all 0.3s ease !important;
             box-shadow: inset 0 0 15px rgba(168, 85, 247, 0.05) !important;
         }
-
         [data-testid="stFileUploaderDropzone"]:hover {
             border-color: #a855f7 !important;
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(3, 7, 18, 0.95)) !important;
             box-shadow: 0 0 20px rgba(168, 85, 247, 0.3), inset 0 0 15px rgba(168, 85, 247, 0.2) !important;
         }
-
-        /* ข้อความในพื้นที่อัปโหลด */
-        [data-testid="stFileUploaderDropzoneInstructions"] {
-            color: #cbd5e1 !important;
-            font-family: 'JetBrains Mono', monospace !important;
-        }
-        [data-testid="stFileUploaderDropzoneInstructions"] > div {
-            color: #94a3b8 !important;
-        }
-
-        /* ปุ่ม Browse Files ใน Uploader */
+        [data-testid="stFileUploaderDropzoneInstructions"] { color: #cbd5e1 !important; font-family: 'JetBrains Mono', monospace !important; }
+        [data-testid="stFileUploaderDropzoneInstructions"] > div { color: #94a3b8 !important; }
         [data-testid="stFileUploaderDropzone"] button {
-            background: rgba(168, 85, 247, 0.15) !important;
-            color: #e9d5ff !important;
-            border: 1px solid rgba(168, 85, 247, 0.5) !important;
-            border-radius: 8px !important;
-            font-family: 'JetBrains Mono', monospace !important;
-            font-weight: bold !important;
-            transition: all 0.3s ease !important;
-            box-shadow: none !important;
+            background: rgba(168, 85, 247, 0.15) !important; color: #e9d5ff !important;
+            border: 1px solid rgba(168, 85, 247, 0.5) !important; border-radius: 8px !important;
+            font-family: 'JetBrains Mono', monospace !important; font-weight: bold !important;
         }
-
         [data-testid="stFileUploaderDropzone"] button:hover {
-            background: #a855f7 !important;
-            color: #ffffff !important;
+            background: #a855f7 !important; color: #ffffff !important;
             box-shadow: 0 0 15px rgba(168, 85, 247, 0.6) !important;
-            transform: translateY(-1px) !important;
         }
+        [data-testid="stUploadedFile"] { background: rgba(30, 41, 59, 0.8) !important; border: 1px solid rgba(168, 85, 247, 0.3) !important; border-radius: 8px !important; }
+        [data-testid="stUploadedFileName"] { color: #e9d5ff !important; font-family: 'JetBrains Mono', monospace !important; }
 
-        /* สไตล์กรอบรายชื่อไฟล์ที่อัปโหลดสำเร็จ */
-        [data-testid="stUploadedFile"] {
-            background: rgba(30, 41, 59, 0.8) !important;
-            border: 1px solid rgba(168, 85, 247, 0.3) !important;
-            border-radius: 8px !important;
-        }
-        [data-testid="stUploadedFileName"] {
-            color: #e9d5ff !important;
-            font-family: 'JetBrains Mono', monospace !important;
-        }
         /* ------------------------------------------------------------- */
-
-        [data-testid="stForm"], .glass-card {
+        /* ★ อัปเกรดปุ่มกดทุกชนิด (รวมปุ่ม AUTHENTICATE) ให้ล้ำยุค ★ */
+        /* ------------------------------------------------------------- */
+        div[data-testid="stButton"] > button, div.stFormSubmitButton > button {
+            background: linear-gradient(90deg, rgba(2, 132, 199, 0.85) 0%, rgba(14, 165, 233, 0.95) 100%) !important;
+            color: #ffffff !important; 
+            font-family: 'JetBrains Mono', monospace !important;
+            font-size: 1rem !important;
+            font-weight: 800 !important; 
+            letter-spacing: 1px !important;
+            text-transform: uppercase;
+            border-radius: 8px !important; 
+            width: 100%;
+            border: 1px solid rgba(56, 189, 248, 0.6) !important;
+            padding: 14px !important;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.3) !important;
+            transition: all 0.3s ease !important;
+        }
+        div[data-testid="stButton"] > button:hover, div.stFormSubmitButton > button:hover { 
+            transform: translateY(-2px) !important; 
+            background: linear-gradient(90deg, #0284c7 0%, #38bdf8 100%) !important;
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.7) !important;
+            border-color: #ffffff !important;
+        }
+        
+        .glass-card {
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.8)) !important;
             backdrop-filter: blur(20px) !important;
             border: 1px solid rgba(14, 165, 233, 0.2) !important;
@@ -150,31 +166,8 @@ st.markdown("""
             padding: 35px !important;
             box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5) !important;
         }
-        
-        div.stButton > button, div.stFormSubmitButton > button {
-            background: linear-gradient(90deg, #0284c7 0%, #0ea5e9 100%) !important;
-            color: #ffffff !important; 
-            font-weight: 700 !important; 
-            text-transform: uppercase;
-            border-radius: 8px !important; 
-            width: 100%;
-            border: 1px solid rgba(56, 189, 248, 0.5) !important;
-            padding: 12px !important;
-            box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3) !important;
-            transition: all 0.3s ease !important;
-        }
-        
-        div.stButton > button:hover, div.stFormSubmitButton > button:hover { 
-            transform: translateY(-2px) !important; 
-            box-shadow: 0 8px 25px rgba(14, 165, 233, 0.6) !important;
-        }
-        
         .text-gradient { background: linear-gradient(to right, #38bdf8, #818cf8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        
-        .api-pulse {
-            width: 8px; height: 8px; background: #10b981; border-radius: 50%;
-            box-shadow: 0 0 10px #10b981; animation: pulse 2s infinite;
-        }
+        .api-pulse { width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981; animation: pulse 2s infinite; }
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
     </style>
 """, unsafe_allow_html=True)
@@ -265,8 +258,11 @@ def check_password():
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         st.markdown("<h2 style='text-align: center;'><span class='text-gradient'>MrGame</span> Terminal</h2>", unsafe_allow_html=True)
         st.markdown("<p style='text-align: center; color: #64748b; font-size: 0.8rem; font-family: \"JetBrains Mono\"; margin-bottom: 25px;'>SYSTEM_AUTHENTICATION_REQUIRED</p>", unsafe_allow_html=True)
+        
         username = st.text_input("Username", placeholder="Enter ID")
         password = st.text_input("Password", type="password", placeholder="Enter Key")
+        
+        st.markdown("<br>", unsafe_allow_html=True) # ดันปุ่มลงมาให้สมดุล
         if st.button("AUTHENTICATE"):
             if username == "mrgame" and password == "Game2541$!!":
                 st.session_state.logged_in = True
