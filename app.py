@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import sqlite3
 from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
@@ -10,7 +9,7 @@ import requests
 # ==========================================
 # 0. PAGE CONFIG & GLOBAL CSS
 # ==========================================
-st.set_page_config(page_title="MrGame | AI Telemetry", page_icon="⛽", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="MrGame | AI Telemetry", page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
 
 st.markdown("""
     <style>
@@ -31,9 +30,7 @@ st.markdown("""
         label { color: #cbd5e1 !important; font-weight: 600 !important; font-size: 0.9rem !important; }
         #MainMenu, header, footer {visibility: hidden;}
 
-        /* ------------------------------------------------------------- */
-        /* ★ ปราบ Input ทุกชนิดในระบบ (ล็อกอิน, รหัสผ่าน, ตัวเลข, วันที่) ★ */
-        /* ------------------------------------------------------------- */
+        /* ★ ปรับแต่ง Input ทุกชนิดให้เป็นสไตล์แผงควบคุมเรืองแสง Cyberpunk ★ */
         [data-testid="stTextInput"] > div > div,
         [data-testid="stNumberInputContainer"], 
         [data-baseweb="select"] > div, 
@@ -96,9 +93,7 @@ st.markdown("""
             box-shadow: 0 0 15px #38bdf8 !important;
         }
 
-        /* ------------------------------------------------------------- */
-        /* ★ อัปเกรด File Uploader (OCR) สไตล์ Cyberpunk ★ */
-        /* ------------------------------------------------------------- */
+        /* ★ File Uploader (OCR) สไตล์ Cyberpunk ★ */
         [data-testid="stFileUploaderDropzone"] {
             background: linear-gradient(145deg, rgba(15, 23, 42, 0.6), rgba(3, 7, 18, 0.8)) !important;
             border: 2px dashed rgba(168, 85, 247, 0.5) !important;
@@ -125,9 +120,7 @@ st.markdown("""
         [data-testid="stUploadedFile"] { background: rgba(30, 41, 59, 0.8) !important; border: 1px solid rgba(168, 85, 247, 0.3) !important; border-radius: 8px !important; }
         [data-testid="stUploadedFileName"] { color: #e9d5ff !important; font-family: 'JetBrains Mono', monospace !important; }
 
-        /* ------------------------------------------------------------- */
-        /* ★ อัปเกรดปุ่มกดทุกชนิด ให้ล้ำยุค ★ */
-        /* ------------------------------------------------------------- */
+        /* ★ ปุ่มกดสไตล์ดิจิทัลล้ำยุค ★ */
         div[data-testid="stButton"] > button, div.stFormSubmitButton > button {
             background: linear-gradient(90deg, rgba(2, 132, 199, 0.85) 0%, rgba(14, 165, 233, 0.95) 100%) !important;
             color: #ffffff !important; 
@@ -240,7 +233,7 @@ def get_fuel_prices():
     return formatted, status_text
 
 # ==========================================
-# 2. AUTHENTICATION & DATABASE
+# 2. AUTHENTICATION & DATABASE CONNECT
 # ==========================================
 def check_password():
     if 'logged_in' not in st.session_state: st.session_state.logged_in = False
@@ -266,35 +259,21 @@ def check_password():
     return False
 
 if check_password():
-    DB_FILE = "mrgame_core_v1.db"
-
-    def init_database():
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('''CREATE TABLE IF NOT EXISTS vehicles (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, fuel_type TEXT NOT NULL)''')
-        c.execute('''CREATE TABLE IF NOT EXISTS fuel_logs (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT NOT NULL, vehicle_name TEXT NOT NULL, odometer REAL NOT NULL, liters REAL NOT NULL, total_price REAL NOT NULL, FOREIGN KEY (vehicle_name) REFERENCES vehicles(name))''')
-        c.execute("SELECT COUNT(*) FROM vehicles")
-        if c.fetchone()[0] == 0:
-            c.executemany("INSERT INTO vehicles (name, fuel_type) VALUES (?, ?)", [('Honda PCX 150', 'Gasohol 95'), ('Honda Giorno+', 'Gasohol 95'), ('Ford Ranger', 'Diesel')])
-        conn.commit(); conn.close()
-    
-    init_database()
+    # เรียกใช้การเชื่อมต่อระดับคลาวด์กับ Supabase ผ่าน Secrets
+    conn = st.connection("supabase", type="sql")
 
     def get_latest_data(vehicle_name):
-        conn = sqlite3.connect(DB_FILE)
-        df = pd.read_sql_query("SELECT odometer, date FROM fuel_logs WHERE vehicle_name = ? ORDER BY odometer DESC LIMIT 1", conn, params=[vehicle_name])
-        conn.close()
-        if not df.empty: return df.iloc[0]['odometer'], df.iloc[0]['date']
+        df = conn.query("SELECT odometer, date FROM fuel_logs WHERE vehicle_name = :v_name ORDER BY odometer DESC LIMIT 1", params={"v_name": vehicle_name})
+        if not df.empty: return float(df.iloc[0]['odometer']), df.iloc[0]['date']
         return 0.0, None
 
-    conn = sqlite3.connect(DB_FILE)
-    logs_df = pd.read_sql_query("SELECT * FROM fuel_logs ORDER BY date DESC, odometer DESC", conn)
-    vehicles_df = pd.read_sql_query("SELECT name, fuel_type FROM vehicles", conn)
-    conn.close()
+    # ดึงข้อมูล Master Data และ Transactional Data จาก Cloud
+    logs_df = conn.query("SELECT id, date, vehicle_name, odometer, liters, total_price FROM fuel_logs ORDER BY date DESC, odometer DESC")
+    vehicles_df = conn.query("SELECT name, fuel_type FROM vehicles WHERE is_active = true")
 
     st.markdown("<h1 style='font-size: 2.2rem;'>ศูนย์วิเคราะห์ข้อมูลอัจฉริยะ <span class='text-gradient'>(Telemetry Center)</span></h1>", unsafe_allow_html=True)
 
-    tab_entry, tab_dashboard, tab_records, tab_price = st.tabs(["[01] บันทึกข้อมูล", "[02] แดชบอร์ดวิเคราะห์", "[03] ฐานข้อมูล_SQLITE", "[04] ราคาน้ำมันวันนี้"])
+    tab_entry, tab_dashboard, tab_records, tab_price = st.tabs(["[01] บันทึกข้อมูล", "[02] แดชบอร์ดวิเคราะห์", "[03] ฐานข้อมูล_CLOUD", "[04] ราคาน้ำมันวันนี้"])
 
     with tab_entry:
         col_form, col_ocr = st.columns([1.2, 1])
@@ -314,11 +293,13 @@ if check_password():
                 if form_odo <= last_odo and last_odo > 0:
                     st.error(f"ข้อผิดพลาด: เลขไมล์ปัจจุบันต้องมากกว่าเลขไมล์เดิม ({last_odo:,.1f} กม.)")
                 else:
-                    conn = sqlite3.connect(DB_FILE)
-                    c = conn.cursor()
-                    c.execute("INSERT INTO fuel_logs (date, vehicle_name, odometer, liters, total_price) VALUES (?, ?, ?, ?, ?)", (form_date.strftime('%Y-%m-%d'), form_vehicle, form_odo, form_liters, form_price))
-                    conn.commit(); conn.close()
-                    st.success("บันทึกข้อมูลเรียบร้อย."); time.sleep(1); st.rerun()
+                    with conn.session as s:
+                        s.execute(
+                            "INSERT INTO fuel_logs (date, vehicle_name, odometer, liters, total_price) VALUES (:date, :v_name, :odo, :liters, :price)",
+                            {"date": form_date.strftime('%Y-%m-%d'), "v_name": form_vehicle, "odo": form_odo, "liters": form_liters, "price": form_price}
+                        )
+                        s.commit()
+                    st.success("บันทึกข้อมูลลงระบบ Cloud สำเร็จ!"); time.sleep(1); st.rerun()
 
         with col_ocr:
             st.markdown('<div class="glass-card">', unsafe_allow_html=True)
@@ -356,21 +337,17 @@ if check_password():
             st.info("ยังไม่มีข้อมูลบันทึกในระบบ")
 
     with tab_records:
-        st.markdown("<h4 style='color: #10b981;'><span style='color: #64748b;'>//</span> ฐานข้อมูล_SQLITE (Editable)</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='color: #10b981;'><span style='color: #64748b;'>//</span> ฐานข้อมูลพลังงานบนระบบคลาวด์ (Editable)</h4>", unsafe_allow_html=True)
         if not logs_df.empty:
-            edited_df = st.data_editor(logs_df, use_container_width=True, num_rows="dynamic", key="fuel_editor")
-            if st.button("บันทึกการแก้ไขไปยังฐานข้อมูล"):
+            edited_df = st.data_editor(logs_df, use_container_width=True, num_rows="dynamic", key="fuel_editor", disabled=["id"])
+            if st.button("บันทึกการแก้ไขไปยังฐานข้อมูล Cloud"):
                 try:
-                    conn = sqlite3.connect(DB_FILE)
-                    edited_df.to_sql('fuel_logs', conn, if_exists='replace', index=False)
-                    conn.commit(); conn.close()
-                    st.success("อัปเดตข้อมูลสำเร็จ!"); time.sleep(1); st.rerun()
+                    # อัปเดตข้อมูลขึ้นตรงกับ Supabase Postgres Engine
+                    edited_df.to_sql('fuel_logs', conn.engine, if_exists='replace', index=False)
+                    st.success("ซิงค์ข้อมูลกับคลาวด์สำเร็จ!"); time.sleep(1); st.rerun()
                 except Exception as e:
                     st.error(f"Error: {e}")
 
-    # ==========================================
-    # TAB 4: REDESIGNED LIVE MARKET
-    # ==========================================
     with tab_price:
         st.markdown("""
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 15px; margin-bottom: 25px;">
