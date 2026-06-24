@@ -264,7 +264,7 @@ if check_password():
     # --- เริ่มต้นส่วนที่แก้ไขระบบหลังบ้าน (ไม่กระทบหน้าตาแอป) ---
     @st.cache_resource
     def init_connection():
-        db_url = st.secrets["connections"]["supabase"]["url"]
+        db_url = st.secrets["DATABASE_URL"]
         return sqlalchemy.create_engine(
             db_url,
             connect_args={"sslmode": "require"},
