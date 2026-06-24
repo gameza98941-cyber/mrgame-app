@@ -252,7 +252,8 @@ def check_password():
         
         st.markdown("<br>", unsafe_allow_html=True) 
         if st.button("SECURE LOGIN"):
-            if username == "mrgame" and password == "Game2541$!!":
+            # ✅ แก้ไขช่องโหว่: ดึงรหัสผ่านจาก Streamlit Secrets แทนการฝังในโค้ดโดยตรง
+            if username == st.secrets["APP_USERNAME"] and password == st.secrets["APP_PASSWORD"]:
                 st.session_state.logged_in = True
                 st.rerun()
             else: st.error("Access Denied: Invalid Credentials")
@@ -269,7 +270,7 @@ if check_password():
             db_url,
             connect_args={"sslmode": "require"},
             pool_pre_ping=True,  # ตัวแปรสำคัญ: สั่งให้เช็คสายก่อนดึงข้อมูลทุกครั้ง ป้องกัน OperationalError
-            pool_recycle=300     # รีเฟรชการเชื่อมต่อทุก 5 นาที ป้องกัน Supabase ตัดสายทิ้ง
+            pool_recycle=300     # รีเฟรชการเชื่อมต่อทุก 5 นาที ป้องกัน Cloud ตัดสายทิ้ง
         )
 
     try:
@@ -335,9 +336,13 @@ if check_password():
             st.markdown("<h4 style='color: #a855f7;'><span style='color: #64748b;'>#</span> ระบบอ่านใบเสร็จอัตโนมัติ (OCR)</h4>", unsafe_allow_html=True)
             uploaded_file = st.file_uploader("เลือกไฟล์ใบเสร็จ (Browse/Gallery/Camera)", type=['png', 'jpg', 'jpeg'])
             if uploaded_file:
-                st.image(uploaded_file, use_column_width=True)
-                with st.spinner('กำลังประมวลผล...'): time.sleep(1.5)
-                st.success("ระบบประมวลผลเสร็จสิ้น")
+                # ✅ แก้ไขช่องโหว่: ตรวจสอบขนาดไฟล์ไม่ให้เกิน 5MB เพื่อป้องกันระบบล่ม (DoS)
+                if uploaded_file.size > 5 * 1024 * 1024:
+                    st.error("❌ ขนาดไฟล์ใหญ่เกินไป! ระบบจำกัดขนาดไม่เกิน 5MB เพื่อความปลอดภัย")
+                else:
+                    st.image(uploaded_file, use_column_width=True)
+                    with st.spinner('กำลังประมวลผล...'): time.sleep(1.5)
+                    st.success("ระบบประมวลผลเสร็จสิ้น")
             st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_dashboard:
@@ -371,8 +376,10 @@ if check_password():
             edited_df = st.data_editor(logs_df, use_container_width=True, num_rows="dynamic", key="fuel_editor", disabled=["id"])
             if st.button("บันทึกการแก้ไขไปยังฐานข้อมูล Cloud"):
                 try:
-                    # อัปเดตข้อมูลขึ้นตรงกับ Supabase Postgres Engine
-                    edited_df.to_sql('fuel_logs', engine, if_exists='replace', index=False)
+                    # ✅ แก้ไขช่องโหว่: ป้องกันโครงสร้างฐานข้อมูลและ Constraints พังจากการถูกดรอปทิ้ง
+                    with engine.begin() as conn:
+                        conn.execute(sqlalchemy.text("TRUNCATE TABLE public.fuel_logs;"))
+                    edited_df.to_sql('fuel_logs', engine, if_exists='append', index=False)
                     st.success("ซิงค์ข้อมูลกับคลาวด์สำเร็จ!"); time.sleep(1); st.rerun()
                 except Exception as e:
                     st.error(f"Error: {e}")
