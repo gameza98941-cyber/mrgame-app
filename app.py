@@ -5,10 +5,12 @@ import plotly.express as px
 import plotly.graph_objects as go
 import time
 import requests
-import sqlalchemy  # เพิ่มตัวนี้เข้ามาเพื่อจัดการ Connection ให้เสถียรที่สุด
+import sqlalchemy  
+import json
+import re
 
 # ==========================================
-# 0. PAGE CONFIG & GLOBAL CSS (ไม่ได้ปรับเปลี่ยน)
+# 0. PAGE CONFIG & GLOBAL CSS 
 # ==========================================
 st.set_page_config(page_title="MrGame | AI Telemetry", page_icon="⚡", layout="wide", initial_sidebar_state="expanded")
 
@@ -159,7 +161,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# 1. ADVANCED API FETCHING (7 FUELS VERSION) (ไม่ได้ปรับเปลี่ยน)
+# 1. ADVANCED API FETCHING
 # ==========================================
 def get_fuel_prices():
     target_fuels = [
@@ -252,7 +254,6 @@ def check_password():
         
         st.markdown("<br>", unsafe_allow_html=True) 
         if st.button("SECURE LOGIN"):
-            # ✅ แก้ไขช่องโหว่: ดึงรหัสผ่านจาก Streamlit Secrets แทนการฝังในโค้ดโดยตรง
             if username == st.secrets["APP_USERNAME"] and password == st.secrets["APP_PASSWORD"]:
                 st.session_state.logged_in = True
                 st.rerun()
@@ -262,15 +263,14 @@ def check_password():
 
 if check_password():
     
-    # --- เริ่มต้นส่วนที่แก้ไขระบบหลังบ้าน (ไม่กระทบหน้าตาแอป) ---
     @st.cache_resource
     def init_connection():
         db_url = st.secrets["DATABASE_URL"]
         return sqlalchemy.create_engine(
             db_url,
             connect_args={"sslmode": "require"},
-            pool_pre_ping=True,  # ตัวแปรสำคัญ: สั่งให้เช็คสายก่อนดึงข้อมูลทุกครั้ง ป้องกัน OperationalError
-            pool_recycle=300     # รีเฟรชการเชื่อมต่อทุก 5 นาที ป้องกัน Cloud ตัดสายทิ้ง
+            pool_pre_ping=True,
+            pool_recycle=300
         )
 
     try:
@@ -288,15 +288,12 @@ if check_password():
             pass
         return 0.0, None
 
-    # ดึงข้อมูลผ่าน Engine แทน conn.query ของเดิมที่มักจะหลุด
     try:
         logs_df = pd.read_sql("SELECT id, date, vehicle_name, odometer, liters, total_price FROM fuel_logs ORDER BY date DESC, odometer DESC", engine)
         vehicles_df = pd.read_sql("SELECT name, fuel_type FROM vehicles WHERE is_active = true", engine)
     except Exception as e:
         st.error(f"⚠️ เกิดปัญหา OperationalError: ไม่สามารถดึงข้อมูลจาก Cloud ได้")
-        st.info(f"รายละเอียดทางเทคนิค: {e}")
         st.stop()
-    # --- สิ้นสุดส่วนที่แก้ไขระบบหลังบ้าน ---
 
     st.markdown("<h1 style='font-size: 2.2rem;'>ศูนย์วิเคราะห์ข้อมูลอัจฉริยะ <span class='text-gradient'>(Telemetry Center)</span></h1>", unsafe_allow_html=True)
 
@@ -304,6 +301,12 @@ if check_password():
 
     with tab_entry:
         col_form, col_ocr = st.columns([1.2, 1])
+        
+        # 📌 เตรียม Session State สำหรับรับค่าจาก AI
+        if 'ocr_liters' not in st.session_state: st.session_state.ocr_liters = 0.0
+        if 'ocr_price' not in st.session_state: st.session_state.ocr_price = 0.0
+        if 'last_processed_file' not in st.session_state: st.session_state.last_processed_file = None
+
         with col_form:
             with st.form(key='nexus_form'):
                 st.markdown("<h4 style='color: #38bdf8;'><span style='color: #64748b;'>#</span> ระบบบันทึกข้อมูล (Telemetry Input)</h4>", unsafe_allow_html=True)
@@ -311,8 +314,11 @@ if check_password():
                 v_options = {row['name']: row['fuel_type'] for _, row in vehicles_df.iterrows()}
                 form_vehicle = st.selectbox("เลือกยานพาหนะ", list(v_options.keys()))
                 form_odo = st.number_input("เลขไมล์ปัจจุบัน (กม.)", min_value=0.0, step=1.0)
-                form_liters = st.number_input("ปริมาณเชื้อเพลิง (ลิตร)", min_value=0.0, step=0.01)
-                form_price = st.number_input("ยอดชำระสุทธิ (บาท)", min_value=0.0, step=1.0)
+                
+                # 📌 นำค่าที่ AI สกัดได้มาใส่ในช่องกรอกให้อัตโนมัติ
+                form_liters = st.number_input("ปริมาณเชื้อเพลิง (ลิตร)", min_value=0.0, step=0.01, value=float(st.session_state.ocr_liters))
+                form_price = st.number_input("ยอดชำระสุทธิ (บาท)", min_value=0.0, step=1.0, value=float(st.session_state.ocr_price))
+                
                 submit_btn = st.form_submit_button(label='ยืนยันการบันทึกข้อมูล')
             
             if submit_btn:
@@ -321,28 +327,79 @@ if check_password():
                     st.error(f"ข้อผิดพลาด: เลขไมล์ปัจจุบันต้องมากกว่าเลขไมล์เดิม ({last_odo:,.1f} กม.)")
                 else:
                     try:
-                        # บันทึกข้อมูลโดยใช้ Engine ที่เสถียรแล้ว
                         with engine.begin() as conn:
                             conn.execute(
                                 sqlalchemy.text("INSERT INTO fuel_logs (date, vehicle_name, odometer, liters, total_price) VALUES (:date, :v_name, :odo, :liters, :price)"),
                                 {"date": form_date.strftime('%Y-%m-%d'), "v_name": form_vehicle, "odo": form_odo, "liters": form_liters, "price": form_price}
                             )
+                        # เคลียร์ค่า AI ทิ้งเมื่อบันทึกสำเร็จ
+                        st.session_state.ocr_liters = 0.0
+                        st.session_state.ocr_price = 0.0
+                        st.session_state.last_processed_file = None
                         st.success("บันทึกข้อมูลลงระบบ Cloud สำเร็จ!"); time.sleep(1); st.rerun()
                     except Exception as e:
                         st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
 
         with col_ocr:
             st.markdown('<div class="glass-card">', unsafe_allow_html=True)
-            st.markdown("<h4 style='color: #a855f7;'><span style='color: #64748b;'>#</span> ระบบอ่านใบเสร็จอัตโนมัติ (OCR)</h4>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color: #a855f7;'><span style='color: #64748b;'>#</span> ระบบอ่านใบเสร็จอัตโนมัติ (OCR AI)</h4>", unsafe_allow_html=True)
             uploaded_file = st.file_uploader("เลือกไฟล์ใบเสร็จ (Browse/Gallery/Camera)", type=['png', 'jpg', 'jpeg'])
+            
             if uploaded_file:
-                # ✅ แก้ไขช่องโหว่: ตรวจสอบขนาดไฟล์ไม่ให้เกิน 5MB เพื่อป้องกันระบบล่ม (DoS)
                 if uploaded_file.size > 5 * 1024 * 1024:
                     st.error("❌ ขนาดไฟล์ใหญ่เกินไป! ระบบจำกัดขนาดไม่เกิน 5MB เพื่อความปลอดภัย")
                 else:
                     st.image(uploaded_file, use_column_width=True)
-                    with st.spinner('กำลังประมวลผล...'): time.sleep(1.5)
-                    st.success("ระบบประมวลผลเสร็จสิ้น")
+                    
+                    # 📌 ถ้าเป็นไฟล์ใหม่ที่เพิ่งอัปโหลด ให้เริ่มให้ AI อ่าน
+                    if uploaded_file.name != st.session_state.last_processed_file:
+                        with st.spinner('🤖 AI กำลังสกัดข้อมูลตัวเลข...'):
+                            try:
+                                import google.generativeai as genai
+                                from PIL import Image
+                                
+                                if "GEMINI_API_KEY" in st.secrets:
+                                    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+                                    model = genai.GenerativeModel('gemini-1.5-flash')
+                                    
+                                    img = Image.open(uploaded_file)
+                                    prompt = """
+                                    คุณคือระบบ AI อัจฉริยะวิเคราะห์ใบเสร็จปั๊มน้ำมันไทย ไม่ว่าจะเป็น ปตท., PT, บางจาก, Shell ฯลฯ
+                                    จงสกัดข้อมูล 2 อย่างจากรูปภาพใบเสร็จนี้:
+                                    1. ปริมาณเชื้อเพลิง (ลิตร) - มักมีทศนิยม 2-3 ตำแหน่ง
+                                    2. ยอดชำระสุทธิ (บาท) - มักเป็นหลักร้อยหรือพัน
+                                    ตอบกลับเป็น JSON format เท่านั้น ห้ามมีข้อความอื่น: {"liters": <ตัวเลข>, "price": <ตัวเลข>}
+                                    ถ้าหาไม่เจอให้ตอบ 0.0
+                                    """
+                                    response = model.generate_content([prompt, img])
+                                    
+                                    json_match = re.search(r'\{.*\}', response.text, re.DOTALL)
+                                    if json_match:
+                                        data = json.loads(json_match.group(0))
+                                        st.session_state.ocr_liters = float(data.get('liters', 0.0))
+                                        st.session_state.ocr_price = float(data.get('price', 0.0))
+                                        st.session_state.last_processed_file = uploaded_file.name
+                                        st.rerun() # รีเฟรชหน้าจอเพื่อให้ตัวเลขเด้งไปเข้าฟอร์ม
+                                    else:
+                                        st.warning("⚠️ AI ไม่สามารถดึงตัวเลขได้ โปรดกรอกเอง")
+                                        st.session_state.last_processed_file = uploaded_file.name
+                                else:
+                                    st.warning("⚠️ ระบบยังไม่ได้ตั้งค่า GEMINI_API_KEY (จำลองการทำงาน)")
+                                    st.session_state.last_processed_file = uploaded_file.name
+                                    
+                            except Exception as e:
+                                st.error(f"❌ ระบบ AI ขัดข้อง: โปรดเช็คการตั้งค่า API")
+                                st.session_state.last_processed_file = uploaded_file.name
+                    else:
+                        if st.session_state.ocr_liters > 0:
+                            st.success(f"✔️ AI ดึงค่าสำเร็จ! (ลิตร: {st.session_state.ocr_liters} | บาท: {st.session_state.ocr_price})")
+            else:
+                # 📌 ถ้ากดปิดรูป ให้รีเซ็ตค่ากลับเป็น 0
+                if st.session_state.last_processed_file is not None:
+                    st.session_state.ocr_liters = 0.0
+                    st.session_state.ocr_price = 0.0
+                    st.session_state.last_processed_file = None
+
             st.markdown('</div>', unsafe_allow_html=True)
 
     with tab_dashboard:
@@ -376,7 +433,6 @@ if check_password():
             edited_df = st.data_editor(logs_df, use_container_width=True, num_rows="dynamic", key="fuel_editor", disabled=["id"])
             if st.button("บันทึกการแก้ไขไปยังฐานข้อมูล Cloud"):
                 try:
-                    # ✅ แก้ไขช่องโหว่: ป้องกันโครงสร้างฐานข้อมูลและ Constraints พังจากการถูกดรอปทิ้ง
                     with engine.begin() as conn:
                         conn.execute(sqlalchemy.text("TRUNCATE TABLE public.fuel_logs;"))
                     edited_df.to_sql('fuel_logs', engine, if_exists='append', index=False)
