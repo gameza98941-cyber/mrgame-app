@@ -305,7 +305,6 @@ if check_password():
         # 📌 เตรียม Session State สำหรับรับค่าจาก AI
         if 'ocr_liters' not in st.session_state: st.session_state.ocr_liters = 0.0
         if 'ocr_price' not in st.session_state: st.session_state.ocr_price = 0.0
-        if 'last_processed_file' not in st.session_state: st.session_state.last_processed_file = None
 
         with col_form:
             with st.form(key='nexus_form'):
@@ -335,7 +334,6 @@ if check_password():
                         # เคลียร์ค่า AI ทิ้งเมื่อบันทึกสำเร็จ
                         st.session_state.ocr_liters = 0.0
                         st.session_state.ocr_price = 0.0
-                        st.session_state.last_processed_file = None
                         st.success("บันทึกข้อมูลลงระบบ Cloud สำเร็จ!"); time.sleep(1); st.rerun()
                     except Exception as e:
                         st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
@@ -351,8 +349,8 @@ if check_password():
                 else:
                     st.image(uploaded_file, use_column_width=True)
                     
-                    # 📌 ถ้าเป็นไฟล์ใหม่ที่เพิ่งอัปโหลด ให้เริ่มให้ AI อ่าน
-                    if uploaded_file.name != st.session_state.last_processed_file:
+                    # 📌 แก้บั๊กมือถือชื่อไฟล์ซ้ำ โดยการเพิ่มปุ่มกดสั่งงาน AI แทนการรันอัตโนมัติ
+                    if st.button("🤖 สั่ง AI สกัดตัวเลขจากรูปนี้"):
                         with st.spinner('🤖 AI กำลังสกัดข้อมูลตัวเลข...'):
                             try:
                                 import google.generativeai as genai
@@ -378,27 +376,22 @@ if check_password():
                                         data = json.loads(json_match.group(0))
                                         st.session_state.ocr_liters = float(data.get('liters', 0.0))
                                         st.session_state.ocr_price = float(data.get('price', 0.0))
-                                        st.session_state.last_processed_file = uploaded_file.name
-                                        st.rerun() # รีเฟรชหน้าจอเพื่อให้ตัวเลขเด้งไปเข้าฟอร์ม
+                                        st.rerun() # รีเฟรชหน้าจอเพื่อให้ตัวเลขเด้งไปเข้าฟอร์มทันที
                                     else:
                                         st.warning("⚠️ AI ไม่สามารถดึงตัวเลขได้ โปรดกรอกเอง")
-                                        st.session_state.last_processed_file = uploaded_file.name
                                 else:
-                                    st.warning("⚠️ ระบบยังไม่ได้ตั้งค่า GEMINI_API_KEY (จำลองการทำงาน)")
-                                    st.session_state.last_processed_file = uploaded_file.name
+                                    st.warning("⚠️ ระบบยังไม่ได้ตั้งค่า GEMINI_API_KEY (ในหน้า Settings > Secrets)")
                                     
                             except Exception as e:
-                                st.error(f"❌ ระบบ AI ขัดข้อง: โปรดเช็คการตั้งค่า API")
-                                st.session_state.last_processed_file = uploaded_file.name
-                    else:
-                        if st.session_state.ocr_liters > 0:
-                            st.success(f"✔️ AI ดึงค่าสำเร็จ! (ลิตร: {st.session_state.ocr_liters} | บาท: {st.session_state.ocr_price})")
+                                st.error(f"❌ ระบบ AI ขัดข้อง (โปรดตรวจสอบ requirements.txt หรือ API Key) รายละเอียด: {e}")
+                    
+                    # 📌 แสดงข้อความแจ้งเตือนเมื่อ AI ดึงค่าสำเร็จและพร้อมบันทึก
+                    if st.session_state.ocr_liters > 0:
+                        st.success(f"✔️ AI ดึงค่าสำเร็จ! (ลิตร: {st.session_state.ocr_liters} | บาท: {st.session_state.ocr_price})")
             else:
                 # 📌 ถ้ากดปิดรูป ให้รีเซ็ตค่ากลับเป็น 0
-                if st.session_state.last_processed_file is not None:
-                    st.session_state.ocr_liters = 0.0
-                    st.session_state.ocr_price = 0.0
-                    st.session_state.last_processed_file = None
+                st.session_state.ocr_liters = 0.0
+                st.session_state.ocr_price = 0.0
 
             st.markdown('</div>', unsafe_allow_html=True)
 
