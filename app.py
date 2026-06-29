@@ -358,7 +358,7 @@ if check_password():
                                 
                                 if "GEMINI_API_KEY" in st.secrets:
                                     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-                                    model = genai.GenerativeModel('gemini-1.5-flash')
+                                    model = genai.GenerativeModel('gemini-2.5-flash')
                                     
                                     img = Image.open(uploaded_file)
                                     prompt = """
